@@ -60,7 +60,7 @@ static const int RIGHT_ENC_PIN_B = 33;
    the motor is driven. Encoder sign MUST agree with motor sign or the PID
    will run away to full PWM instead of settling. */
 static const bool LEFT_ENC_INVERT = false;
-static const bool RIGHT_ENC_INVERT = false;
+static const bool RIGHT_ENC_INVERT = true;
 
 /* Pulses shorter than this are rejected by the PCNT hardware filter. */
 static const uint32_t ENC_GLITCH_FILTER_NS = 1000;
