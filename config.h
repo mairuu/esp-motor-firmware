@@ -53,8 +53,8 @@ static const int LEFT_MOTOR_ENABLE = 27;
 static const int LEFT_ENC_PIN_A = 34;
 static const int LEFT_ENC_PIN_B = 35;
 
-static const int RIGHT_ENC_PIN_A = 32;
-static const int RIGHT_ENC_PIN_B = 33;
+static const int RIGHT_ENC_PIN_A = 23;
+static const int RIGHT_ENC_PIN_B = 22;
 
 /* Flip these if a wheel's count runs backwards relative to the direction
    the motor is driven. Encoder sign MUST agree with motor sign or the PID
