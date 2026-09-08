@@ -58,9 +58,17 @@ static const int RIGHT_ENC_PIN_B = 22;
 
 /* Flip these if a wheel's count runs backwards relative to the direction
    the motor is driven. Encoder sign MUST agree with motor sign or the PID
-   will run away to full PWM instead of settling. */
+   will run away to full PWM instead of settling.
+
+   BOTH MEASURED false ON THE ROBOT, 8 Sep 2026. RIGHT_ENC_INVERT was true
+   here (commit 8b745d3, "Invert RIGHT_ENC_INVERT to true") and that was
+   wrong: driven under `o` with true flashed, the right count ran backwards
+   against its own motor. false, reflashed, both sides agree and both wheels
+   turn forward. Do not restore true on the strength of the old commit or of
+   capstone-docs reference/firmware-protocol.md, which still records it --
+   re-measure with cap_ws/src/my_bot/scripts/motor_check.py instead. */
 static const bool LEFT_ENC_INVERT = false;
-static const bool RIGHT_ENC_INVERT = true;
+static const bool RIGHT_ENC_INVERT = false;
 
 /* Pulses shorter than this are rejected by the PCNT hardware filter. */
 static const uint32_t ENC_GLITCH_FILTER_NS = 1000;

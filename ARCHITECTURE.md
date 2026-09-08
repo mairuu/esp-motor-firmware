@@ -19,12 +19,31 @@ to/from the serial protocol below.
 
 ### Pin assignments (as wired on the actual robot)
 
-Encoders (`encoder_driver.h`):
+Encoders (`config.h`):
 - LEFT_ENC_PIN_A = 34, LEFT_ENC_PIN_B = 35
-- RIGHT_ENC_PIN_A = 32, RIGHT_ENC_PIN_B = 33
+- RIGHT_ENC_PIN_A = 23, RIGHT_ENC_PIN_B = 22
 - Note: GPIO34/35 are input-only (no internal pull-up available), so the
   encoders must actively drive these lines (true of typical hall-effect
   motor encoders).
+- Because of that, every boot prints **four** ESP-IDF lines before the
+  banner, and they are expected rather than a fault:
+
+  ```
+  E (12) gpio: gpio_pullup_en(85): GPIO number error (input-only pad has no internal PU)
+  ```
+
+  Four, because 4x quadrature gives the left encoder two PCNT channels and
+  each channel pulls up both a pulse pin and a control pin. The right
+  encoder is on 23/22, which do have pull-ups, and contributes none. The
+  banner still reads `encoders=ok`; the count is the diagnostic. If a fifth
+  ever appears, something moved onto an input-only pad.
+
+> **The right encoder pins were wrong here until 8 Sep 2026.** This file
+> claimed 32/33 and `config.h` said 23/22 — the conflict that
+> `checklists/day-1-foundation.md` step 5.9 exists to settle. Resolved on the
+> hardware: driven under `o`, the right encoder returns changing counts with
+> 23/22 flashed, so `config.h` was right and the "as wired" heading above was
+> not. Measured with `cap_ws/src/my_bot/scripts/motor_check.py`.
 
 Motor driver (`motor_driver.h`):
 - RIGHT_MOTOR_BACKWARD = 12, LEFT_MOTOR_BACKWARD = 26
