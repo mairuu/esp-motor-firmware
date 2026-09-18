@@ -72,3 +72,18 @@ static const bool RIGHT_ENC_INVERT = false;
 
 /* Pulses shorter than this are rejected by the PCNT hardware filter. */
 static const uint32_t ENC_GLITCH_FILTER_NS = 1000;
+
+/* ---- IMU (GY-521 / MPU6050) -------------------------------------------- */
+
+/* GPIO21 is the ESP32's usual default SDA and is free on this robot. The
+   usual default SCL (GPIO22) is not -- it's RIGHT_ENC_PIN_B -- so SCL is
+   moved to GPIO19 (also free) and both are passed explicitly to Wire.begin()
+   rather than relying on the core's defaults. */
+static const int IMU_SDA_PIN = 21;
+static const int IMU_SCL_PIN = 19;
+
+static const uint32_t IMU_I2C_FREQ_HZ = 400000; /* MPU6050 supports fast-mode I2C */
+
+/* GY-521 ties AD0 low on the board, giving the 0x68 address. Only pull AD0
+   high (0x69) if a second MPU6050 shares this bus. */
+static const uint8_t IMU_I2C_ADDR = 0x68;

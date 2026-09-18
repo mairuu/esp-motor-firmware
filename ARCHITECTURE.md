@@ -56,6 +56,14 @@ boot-strapping pins (GPIO0, 2, 15), with the exception of GPIO12
 doesn't cause boot issues (it affects flash voltage selection if pulled
 high at reset).
 
+IMU (`config.h`), GY-521 breakout (MPU6050), over I2C:
+- IMU_SDA_PIN = 21, IMU_SCL_PIN = 19
+- GPIO21 is the ESP32's usual default SDA and was free. The usual default
+  SCL, GPIO22, is not — it's `RIGHT_ENC_PIN_B` — so SCL was moved to
+  GPIO19 (also free) and both pins are passed explicitly to `Wire.begin()`.
+- Address 0x68 (GY-521's AD0 tied low on the board). Not yet validated on
+  hardware — see ROADMAP.md.
+
 ## Why a rewrite instead of porting
 
 The original upstream sketch is AVR-only:
@@ -90,11 +98,14 @@ space-separated arguments, terminated by carriage return (`\r`).
 | `o` | `<pwm_left> <pwm_right>` | Set raw PWM per motor (-255..255), bypasses PID |
 | `m` | `<ticks_left> <ticks_right>` | Set closed-loop target speed in encoder ticks/PID-loop (default loop rate 30 Hz) |
 | `u` | `<Kp>:<Kd>:<Ki>:<Ko>` | Update PID parameters (colon-separated, matches `commands.h`'s `UPDATE_PID='u'`, not the `'p'` shown in README.md's example, which looks like a doc typo) |
+| `i` | none | Reply with `<ax> <ay> <az> <gx> <gy> <gz>` — raw MPU6050 accel/gyro counts, no scaling or filtering (or `IMU Error` on an I2C fault) |
 
 Everything else from the upstream protocol (`a`,`b`,`c`,`d`,`p`,`s`,`t`,`w`,`x`,
 `GET_BAUDRATE`, PWM servos, Ping sonar, generic analog/digital I/O) is
 intentionally dropped — this fork only ever used the L298N driver and
-Arduino-attached encoders.
+Arduino-attached encoders. `i` is new, added on top of the kept upstream
+set rather than revived from it — the upstream protocol had no IMU
+command.
 
 Auto-stop: if no `o`/`m` command arrives within `AUTO_STOP_INTERVAL`
 (2000 ms default), motors are stopped.
@@ -113,6 +124,7 @@ magic.
 - `commands.h` — the 5 command-letter `#define`s + `LEFT`/`RIGHT`
 - `motors.h` / `motors.cpp` — L298N only
 - `encoders.h` / `encoders.cpp` — quadrature decode
+- `mpu6050.h` / `mpu6050.cpp` — GY-521 IMU, raw register access over `Wire`
 - `pid.h` / `pid.cpp` — PID loop, carried over from upstream's
   `diff_controller.h` (already platform-independent)
 - Not carried over: `sensors.h` (Ping/analog sensor helpers),

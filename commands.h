@@ -7,6 +7,7 @@
 #define MOTOR_RAW_PWM  'o'
 #define MOTOR_SPEEDS   'm'
 #define UPDATE_PID     'u'
+#define READ_IMU       'i'
 
 #define LEFT  0
 #define RIGHT 1

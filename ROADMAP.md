@@ -125,6 +125,28 @@ print to UART directly via ROM/IDF logging, bypassing Arduino's `Serial`
 buffering entirely — which would also explain why our `Serial`-level
 instrumentation never saw it coming).
 
+## IMU (GY-521 / MPU6050) — added, not yet validated on hardware
+
+`mpu6050.h`/`mpu6050.cpp` and the `i` command were added on top of the
+validated baseline above. Compiles, but nothing below is confirmed on the
+actual robot yet:
+
+- [ ] Wiring: GY-521 VCC->3V3, GND->GND, SDA->GPIO21, SCL->GPIO19
+  (see `config.h` — SCL was moved off the usual default GPIO22 because
+  that pin is already `RIGHT_ENC_PIN_B`).
+- [ ] Boot banner shows `imu=ok`, not `imu=FAIL` (WHO_AM_I mismatch or bus
+  fault would read as FAIL).
+- [ ] `i\r` returns 6 space-separated non-garbage counts, roughly `0 0
+  16384 0 0 0` at rest flat (az near +1g = 16384 raw at the default
+  +/-2g range, ax/ay near 0, gyro near 0 modulo bias/noise).
+- [ ] Confirm no address conflict / bus contention if anything else ever
+  shares this I2C bus.
+
+Not done: no scaling to physical units (g / deg-s) and no complementary
+filter — raw counts only, by design (see ARCHITECTURE.md protocol table).
+That conversion, plus any `/imu` publishing, is ROS2-host-side work,
+matching how `/odom` is handled for the encoders.
+
 ## Open questions for next session
 
 - Should `MAX_PWM`/`BAUDRATE` live in a shared header instead of the

@@ -11,6 +11,7 @@
      o <pwm_l> <pwm_r>    -> "OK"              raw PWM, bypasses the PID
      m <tick_l> <tick_r>  -> "OK"              closed-loop ticks per frame
      u <Kp>:<Kd>:<Ki>:<Ko> -> "OK"             replace the PID gains
+     i                    -> "<ax> <ay> <az> <gx> <gy> <gz>"  raw IMU counts
 
    See ARCHITECTURE.md for the hardware and the reasoning behind the
    scope, and config.h for pins and tuning.
@@ -22,6 +23,7 @@
 #include "config.h"
 #include "encoders.h"
 #include "motors.h"
+#include "mpu6050.h"
 #include "pid.h"
 
 /* ---- Command buffer --------------------------------------------------- */
@@ -100,6 +102,26 @@ static void runCommand() {
       Serial.println("OK");
       break;
 
+    case READ_IMU: {
+      ImuSample sample;
+      if (!readIMU(&sample)) {
+        Serial.println("IMU Error");
+        break;
+      }
+      Serial.print(sample.ax);
+      Serial.print(' ');
+      Serial.print(sample.ay);
+      Serial.print(' ');
+      Serial.print(sample.az);
+      Serial.print(' ');
+      Serial.print(sample.gx);
+      Serial.print(' ');
+      Serial.print(sample.gy);
+      Serial.print(' ');
+      Serial.println(sample.gz);
+      break;
+    }
+
     default:
       Serial.println("Invalid Command");
       break;
@@ -136,6 +158,7 @@ void setup() {
 
   initMotors();
   bool encodersOk = initEncoders();
+  bool imuOk = initIMU();
   resetPID();
   resetCommand();
 
@@ -146,9 +169,12 @@ void setup() {
   Serial.print("# boot reset=");
   Serial.print((int)esp_reset_reason());
   Serial.print(" encoders=");
-  Serial.println(encodersOk ? "ok" : "FAIL");
+  Serial.print(encodersOk ? "ok" : "FAIL");
+  Serial.print(" imu=");
+  Serial.println(imuOk ? "ok" : "FAIL");
 #else
   (void)encodersOk;
+  (void)imuOk;
 #endif
 }
 
