@@ -125,27 +125,39 @@ print to UART directly via ROM/IDF logging, bypassing Arduino's `Serial`
 buffering entirely — which would also explain why our `Serial`-level
 instrumentation never saw it coming).
 
-## IMU (GY-521 / MPU6050) — added, not yet validated on hardware
+## IMU (GY-521 / MPU6050) — VALIDATED ON HARDWARE 18 Sep 2026
 
 `mpu6050.h`/`mpu6050.cpp` and the `i` command were added on top of the
-validated baseline above. Compiles, but nothing below is confirmed on the
-actual robot yet:
+validated baseline above. Flashed 18 Sep and characterised from the host
+with `cap_ws` `scripts/imu_check.py`:
 
-- [ ] Wiring: GY-521 VCC->3V3, GND->GND, SDA->GPIO21, SCL->GPIO19
+- [x] Wiring: GY-521 VCC->3V3, GND->GND, SDA->GPIO21, SCL->GPIO19
   (see `config.h` — SCL was moved off the usual default GPIO22 because
-  that pin is already `RIGHT_ENC_PIN_B`).
-- [ ] Boot banner shows `imu=ok`, not `imu=FAIL whoami=0x..`. `whoami=0x00`
+  that pin is already `RIGHT_ENC_PIN_B`). Confirmed working 18 Sep 2026.
+- [x] Boot banner shows `imu=ok`, not `imu=FAIL whoami=0x..`. `whoami=0x00`
   is a bus fault (wiring, pull-ups, address); `0x70` or `0x71` is a GY-521
   carrying an MPU6500/MPU9250 die instead of an MPU6050 — a different
   register map, so `WHO_AM_I_VALUE` alone is not the fix.
-- [ ] `i\r` returns 6 space-separated non-garbage counts, roughly `0 0
+  Passed by construction: `imu_check.py` exits on an `imu=FAIL` banner and
+  it ran to completion, so this is a genuine MPU6050 answering 0x68.
+- [x] `i\r` returns 6 space-separated non-garbage counts, roughly `0 0
   16384 0 0 0` at rest flat (az near +1g = 16384 raw at the default
   +/-2g range, ax/ay near 0, gyro near 0 modulo bias/noise).
+  Gyro bias -105.5 / +238.4 / -81.6 raw = -0.81 / +1.82 / -0.62 deg/s, all
+  inside the +/-20 deg/s spec; sigma 0.00171 / 0.00145 / 0.00112 rad/s.
+  The low sigma doubles as proof DLPF_CFG=3 took effect -- with the filter
+  at its power-on default of OFF, 30 Hz sampling aliases chassis noise and
+  it would be several times larger. Numbers in cap_ref
+  records/calibration.md "IMU"; the axis orientation came out identity and
+  is recorded on the ROS side in description/imu.xacro.
 - [ ] Confirm no address conflict / bus contention if anything else ever
-  shares this I2C bus.
+  shares this I2C bus. (Nothing shares it today.)
+- [ ] **Still open:** gyro noise with the MOTORS RUNNING, robot on blocks
+  under `o`. Rest noise is not driving noise, and the host's EKF covariance
+  is padded 8x over the rest figure to cover exactly this gap.
 
-Hardened 18 Sep for being polled from the host's 30 Hz control loop, before
-any hardware validation: 10 ms bus timeout, off-latch after 10 consecutive
+Hardened 18 Sep for being polled from the host's 30 Hz control loop:
+10 ms bus timeout, off-latch after 10 consecutive
 failures, and the ranges/DLPF written explicitly on every boot rather than
 assumed from power-on defaults. Compiles, 311287 bytes. See ARCHITECTURE.md.
 
