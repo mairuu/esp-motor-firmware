@@ -171,7 +171,14 @@ void setup() {
   Serial.print(" encoders=");
   Serial.print(encodersOk ? "ok" : "FAIL");
   Serial.print(" imu=");
-  Serial.println(imuOk ? "ok" : "FAIL");
+  if (imuOk) {
+    Serial.println("ok");
+  } else {
+    /* whoami=0x00 means the read itself failed (wiring, address, pull-ups);
+       any other value is a chip that answered but is not an MPU6050. */
+    Serial.print("FAIL whoami=0x");
+    Serial.println(imuWhoAmI(), HEX);
+  }
 #else
   (void)encodersOk;
   (void)imuOk;

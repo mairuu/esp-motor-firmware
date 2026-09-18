@@ -134,18 +134,27 @@ actual robot yet:
 - [ ] Wiring: GY-521 VCC->3V3, GND->GND, SDA->GPIO21, SCL->GPIO19
   (see `config.h` — SCL was moved off the usual default GPIO22 because
   that pin is already `RIGHT_ENC_PIN_B`).
-- [ ] Boot banner shows `imu=ok`, not `imu=FAIL` (WHO_AM_I mismatch or bus
-  fault would read as FAIL).
+- [ ] Boot banner shows `imu=ok`, not `imu=FAIL whoami=0x..`. `whoami=0x00`
+  is a bus fault (wiring, pull-ups, address); `0x70` or `0x71` is a GY-521
+  carrying an MPU6500/MPU9250 die instead of an MPU6050 — a different
+  register map, so `WHO_AM_I_VALUE` alone is not the fix.
 - [ ] `i\r` returns 6 space-separated non-garbage counts, roughly `0 0
   16384 0 0 0` at rest flat (az near +1g = 16384 raw at the default
   +/-2g range, ax/ay near 0, gyro near 0 modulo bias/noise).
 - [ ] Confirm no address conflict / bus contention if anything else ever
   shares this I2C bus.
 
+Hardened 18 Sep for being polled from the host's 30 Hz control loop, before
+any hardware validation: 10 ms bus timeout, off-latch after 10 consecutive
+failures, and the ranges/DLPF written explicitly on every boot rather than
+assumed from power-on defaults. Compiles, 311287 bytes. See ARCHITECTURE.md.
+
 Not done: no scaling to physical units (g / deg-s) and no complementary
 filter — raw counts only, by design (see ARCHITECTURE.md protocol table).
-That conversion, plus any `/imu` publishing, is ROS2-host-side work,
-matching how `/odom` is handled for the encoders.
+That conversion, plus `/imu` publishing, is ROS2-host-side work inside
+`cap_ws`'s `DiffDriveSerial` hardware interface (the only process that can
+hold the serial port), matching how `/odom` is handled for the encoders.
+The measurement script is `cap_ws/src/my_bot/scripts/imu_check.py`.
 
 ## Open questions for next session
 

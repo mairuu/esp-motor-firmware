@@ -84,6 +84,26 @@ static const int IMU_SCL_PIN = 19;
 
 static const uint32_t IMU_I2C_FREQ_HZ = 400000; /* MPU6050 supports fast-mode I2C */
 
+/* Bus timeout for ONE I2C transaction. The core's default is 50 ms and
+   readIMU() does two transactions, so a shorted or unplugged bus would stall
+   loop() for ~100 ms per `i` command -- three missed PID frames and three
+   missed encoder replies, which the host reads as an encoder fault. The
+   host polls `i` inside its 30 Hz control loop, so this must stay well
+   under PID_INTERVAL_MS. A healthy 14-byte read at 400 kHz takes ~0.4 ms. */
+static const uint16_t IMU_I2C_TIMEOUT_MS = 10;
+
+/* After this many consecutive failed reads the IMU is latched off and `i`
+   answers "IMU Error" instantly, without touching the bus, until the next
+   reset. A dead bus then costs nothing per cycle instead of a timeout each. */
+static const uint8_t IMU_MAX_FAILS = 10;
+
+/* Digital low-pass filter, CONFIG register DLPF_CFG. 3 = 44 Hz accel /
+   42 Hz gyro bandwidth. The power-on default is 0 (filter OFF, 256 Hz
+   bandwidth, 8 kHz internal rate); polled at 30 Hz that aliases motor and
+   gearbox vibration straight into the yaw rate. Do not raise this above 3
+   without checking the added latency (4.9 ms at 3) against the loop. */
+static const uint8_t IMU_DLPF_CFG = 3;
+
 /* GY-521 ties AD0 low on the board, giving the 0x68 address. Only pull AD0
    high (0x69) if a second MPU6050 shares this bus. */
 static const uint8_t IMU_I2C_ADDR = 0x68;

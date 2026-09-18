@@ -63,6 +63,17 @@ IMU (`config.h`), GY-521 breakout (MPU6050), over I2C:
   GPIO19 (also free) and both pins are passed explicitly to `Wire.begin()`.
 - Address 0x68 (GY-521's AD0 tied low on the board). Not yet validated on
   hardware — see ROADMAP.md.
+- Configured explicitly on every boot, not inherited: ±250 °/s, ±2 g,
+  DLPF_CFG=3 (44/42 Hz), SMPLRT_DIV=0. These are the power-on defaults too,
+  but the ROS host resets the ESP32 by pulsing EN on every connect and that
+  does NOT power-cycle an MPU on the 3V3 rail — so defaults are only what
+  the chip had last time unless they are written.
+- Bus timeout is `IMU_I2C_TIMEOUT_MS` (10 ms, down from the core's 50 ms)
+  and the chip is latched off after `IMU_MAX_FAILS` consecutive bad reads.
+  The host polls `i` inside its 30 Hz control loop on the same serial line
+  as the encoders, so a dead bus must not stall `loop()` — with the core
+  defaults it would cost ~100 ms per poll, three PID frames, and present on
+  the host as an encoder timeout.
 
 ## Why a rewrite instead of porting
 
@@ -98,7 +109,7 @@ space-separated arguments, terminated by carriage return (`\r`).
 | `o` | `<pwm_left> <pwm_right>` | Set raw PWM per motor (-255..255), bypasses PID |
 | `m` | `<ticks_left> <ticks_right>` | Set closed-loop target speed in encoder ticks/PID-loop (default loop rate 30 Hz) |
 | `u` | `<Kp>:<Kd>:<Ki>:<Ko>` | Update PID parameters (colon-separated, matches `commands.h`'s `UPDATE_PID='u'`, not the `'p'` shown in README.md's example, which looks like a doc typo) |
-| `i` | none | Reply with `<ax> <ay> <az> <gx> <gy> <gz>` — raw MPU6050 accel/gyro counts, no scaling or filtering (or `IMU Error` on an I2C fault) |
+| `i` | none | Reply with `<ax> <ay> <az> <gx> <gy> <gz>` — raw MPU6050 counts at ±2 g (16384/g) and ±250 °/s (131 per °/s), on-chip DLPF only, no host-side scaling (or `IMU Error` on an I2C fault, or instantly once latched off after `IMU_MAX_FAILS`) |
 
 Everything else from the upstream protocol (`a`,`b`,`c`,`d`,`p`,`s`,`t`,`w`,`x`,
 `GET_BAUDRATE`, PWM servos, Ping sonar, generic analog/digital I/O) is
