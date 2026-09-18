@@ -144,22 +144,37 @@ with `cap_ws` `scripts/imu_check.py`:
   16384 0 0 0` at rest flat (az near +1g = 16384 raw at the default
   +/-2g range, ax/ay near 0, gyro near 0 modulo bias/noise).
   Gyro bias -105.5 / +238.4 / -81.6 raw = -0.81 / +1.82 / -0.62 deg/s, all
-  inside the +/-20 deg/s spec; sigma 0.00171 / 0.00145 / 0.00112 rad/s.
-  The low sigma doubles as proof DLPF_CFG=3 took effect -- with the filter
+  inside the +/-20 deg/s spec, and repeatable across three runs to 0.7
+  counts on z. Sigma at rest 0.00144 / 0.00097 / 0.00114 rad/s, measured at
+  a true 30 Hz after a read-timeout bug in imu_check.py was fixed (it had
+  capped sampling at 19 Hz and made every round-trip figure a measurement
+  of its own timeout). The low sigma doubles as proof the DLPF is engaged:
   at its power-on default of OFF, 30 Hz sampling aliases chassis noise and
-  it would be several times larger. Numbers in cap_ref
+  this would be several times larger. Numbers in cap_ref
   records/calibration.md "IMU"; the axis orientation came out identity and
   is recorded on the ROS side in description/imu.xacro.
 - [ ] Confirm no address conflict / bus contention if anything else ever
   shares this I2C bus. (Nothing shares it today.)
-- [ ] **Still open:** gyro noise with the MOTORS RUNNING, robot on blocks
-  under `o`. Rest noise is not driving noise, and the host's EKF covariance
-  is padded 8x over the rest figure to cover exactly this gap.
+- [ ] **Still open:** gyro noise with the MOTORS RUNNING. Rest noise is not
+  operating noise -- 85x lower with the drive unpowered (sigma_z 0.00114
+  rad/s at rest against 0.01053 on the running stack), and the host's EKF
+  covariance is set from the latter. DLPF_CFG was raised 3 -> 4 on 18 Sep
+  specifically to cut that figure, and **whether it did is not yet
+  measured**: run `make real USE_EKF=true` and sample /imu_broad/imu wz for
+  30 s. At rest the change made no difference, as expected when there is no
+  vibration to alias.
 
 Hardened 18 Sep for being polled from the host's 30 Hz control loop:
 10 ms bus timeout, off-latch after 10 consecutive
 failures, and the ranges/DLPF written explicitly on every boot rather than
 assumed from power-on defaults. Compiles, 311287 bytes. See ARCHITECTURE.md.
+
+**DLPF_CFG 3 -> 4 on 18 Sep (late), flashed and hash-verified.** 20 Hz gyro
+bandwidth against the host's 30 Hz poll: 42 Hz was nearly 3x Nyquist, so
+everything above 15 Hz was folding back into the reading. Not 5 -- 10 Hz is
+properly below Nyquist but costs 13.4 ms of group delay, nearly half a
+control frame, and that lag lands in the heading estimate Nav2 steers on.
+See `config.h`.
 
 Not done: no scaling to physical units (g / deg-s) and no complementary
 filter — raw counts only, by design (see ARCHITECTURE.md protocol table).
