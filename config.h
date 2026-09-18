@@ -97,12 +97,33 @@ static const uint16_t IMU_I2C_TIMEOUT_MS = 10;
    reset. A dead bus then costs nothing per cycle instead of a timeout each. */
 static const uint8_t IMU_MAX_FAILS = 10;
 
-/* Digital low-pass filter, CONFIG register DLPF_CFG. 3 = 44 Hz accel /
-   42 Hz gyro bandwidth. The power-on default is 0 (filter OFF, 256 Hz
-   bandwidth, 8 kHz internal rate); polled at 30 Hz that aliases motor and
-   gearbox vibration straight into the yaw rate. Do not raise this above 3
-   without checking the added latency (4.9 ms at 3) against the loop. */
-static const uint8_t IMU_DLPF_CFG = 3;
+/* Digital low-pass filter, CONFIG register DLPF_CFG.
+   4 = 20 Hz gyro / 21 Hz accel bandwidth, 8.3 ms group delay.
+
+   THIS SETTING IS CHOSEN AGAINST THE HOST'S POLL RATE, NOT FOR ITS OWN SAKE.
+   The host reads one sample per 30 Hz control frame, so Nyquist is 15 Hz and
+   anything the chip passes above that folds back into the reading as noise.
+   The power-on default of 0 (filter OFF, 256 Hz) is the worst case and is
+   why this register is written at all.
+
+   Was 3 (42 Hz) until 18 Sep 2026, which was still nearly 3x Nyquist: the
+   measured gyro noise on the running stack was sigma 0.01053 rad/s
+   (0.6 deg/s), 11x the variance seen at rest with the drive unpowered, and
+   the host's EKF had to be told so. 4 is the sweet spot.
+
+   DO NOT GO PAST 5. The bandwidth/delay pairs are 3: 42 Hz/4.8 ms,
+   4: 20 Hz/8.3 ms, 5: 10 Hz/13.4 ms, 6: 5 Hz/18.6 ms. 5 is the first value
+   properly below Nyquist but 13.4 ms is nearly half a 33 ms control frame,
+   and that lag lands in the heading estimate that Nav2 steers on. Trading
+   noise for phase delay stops paying somewhere between 4 and 5.
+
+   RE-MEASURE AFTER CHANGING THIS: `imu_check.py` for the rest figure, then
+   the running stack for the figure the covariance actually wants. See
+   cap_ref records/calibration.md "IMU".
+
+   With DLPF_CFG nonzero the gyro output rate is 1 kHz, so SMPLRT_DIV stays
+   0 and the data registers always hold the freshest filtered sample. */
+static const uint8_t IMU_DLPF_CFG = 4;
 
 /* GY-521 ties AD0 low on the board, giving the 0x68 address. Only pull AD0
    high (0x69) if a second MPU6050 shares this bus. */

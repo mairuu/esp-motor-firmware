@@ -64,7 +64,10 @@ IMU (`config.h`), GY-521 breakout (MPU6050), over I2C:
 - Address 0x68 (GY-521's AD0 tied low on the board). Not yet validated on
   hardware — see ROADMAP.md.
 - Configured explicitly on every boot, not inherited: ±250 °/s, ±2 g,
-  DLPF_CFG=3 (44/42 Hz), SMPLRT_DIV=0. These are the power-on defaults too,
+  DLPF_CFG=4 (20 Hz gyro / 21 Hz accel, 8.3 ms delay), SMPLRT_DIV=0. The
+  filter is picked against the host's 30 Hz poll rate: Nyquist is 15 Hz, so
+  anything passed above that aliases into the reading. Was 3 (42 Hz) until
+  18 Sep; see `config.h` for why not 5. These are the power-on defaults too,
   but the ROS host resets the ESP32 by pulsing EN on every connect and that
   does NOT power-cycle an MPU on the 3V3 rail — so defaults are only what
   the chip had last time unless they are written.
